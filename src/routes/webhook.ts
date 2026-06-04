@@ -1,9 +1,8 @@
-import { timingSafeEqual } from 'crypto'
 import { Router, type Request, type Response } from 'express'
 import { z } from 'zod'
-import { env } from '../config/env'
 import { runDuplicateProject } from '../handlers/duplicateProjectHandler'
 import { DuplicationAlreadyRunningError } from '../services/duplicateProject'
+import { verifySecret } from '../utils/auth'
 import { logger } from '../utils/logger'
 
 const payloadSchema = z.any().transform((value, ctx) => {
@@ -19,20 +18,6 @@ const payloadSchema = z.any().transform((value, ctx) => {
 })
 type DuplicateProjectRunner = typeof runDuplicateProject
 
-function verifySecret(req: Request, res: Response): boolean {
-  const provided = req.headers['x-webhook-secret']
-  if (typeof provided !== 'string') {
-    res.status(401).json({ error: 'Missing X-Webhook-Secret header' })
-    return false
-  }
-  const a = Buffer.from(provided)
-  const b = Buffer.from(env.WEBHOOK_SECRET)
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    res.status(401).json({ error: 'Invalid secret' })
-    return false
-  }
-  return true
-}
 
 export function createWebhookRouter(runDuplicate: DuplicateProjectRunner = runDuplicateProject) {
   const router = Router()
