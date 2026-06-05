@@ -81,8 +81,10 @@ export async function getTasksForExport(projectId: string, projectName: string):
     const dataInizioProp = p['Data Inizio']
     const dataInizio = dataInizioProp?.type === 'date' ? (dataInizioProp.date?.start ?? '') : ''
 
-    const dataFineProp = p['Data fine 2']
-    const dataFine = dataFineProp?.type === 'date' ? (dataFineProp.date?.start ?? '') : ''
+    const dataFineProp = p['Data Fine']
+    const dataFine = dataFineProp?.type === 'formula' && dataFineProp.formula.type === 'date'
+      ? (dataFineProp.formula.date?.start ?? '')
+      : ''
 
     const durataProp = p['Durata Pianificata']
     const durataGiornate = durataProp?.type === 'number' ? durataProp.number : null
