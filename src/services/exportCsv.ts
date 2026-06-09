@@ -17,13 +17,13 @@ const HEADERS = [
 function cell(value: string | number | null): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
-  return str.includes(',') || str.includes('"') || str.includes('\n')
+  return str.includes(';') || str.includes('"') || str.includes('\n')
     ? `"${str.replace(/"/g, '""')}"`
     : str
 }
 
 export function generateCsv(rows: TaskExportRow[]): string {
-  const lines = [HEADERS.join(',')]
+  const lines = [HEADERS.join(';')]
   for (const row of rows) {
     lines.push([
       cell(row.projectName),
@@ -37,7 +37,7 @@ export function generateCsv(rows: TaskExportRow[]): string {
       cell(row.costoPersona),
       cell(row.oreEffettive),
       cell(row.costoEffettivoTask),
-    ].join(','))
+    ].join(';'))
   }
   return '﻿' + lines.join('\n')
 }
