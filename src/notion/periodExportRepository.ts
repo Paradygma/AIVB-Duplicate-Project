@@ -5,11 +5,22 @@ import type { TaskExportRow } from './exportRepository'
 import { queryAllPages } from './query'
 import { withRetry } from './retry'
 
-async function getActiveProjects(): Promise<PageObjectResponse[]> {
+async function getActiveProjectsInPeriod(from: string, to: string): Promise<PageObjectResponse[]> {
   return queryAllPages(notion, env.NOTION_PROJECTS_DB_ID, {
-    or: [
-      { property: 'Status', status: { equals: 'In Progress' } },
-      { property: 'Status', status: { equals: 'On Hold' } },
+    and: [
+      {
+        or: [
+          { property: 'Status', status: { equals: 'In Progress' } },
+          { property: 'Status', status: { equals: 'On Hold' } },
+        ],
+      },
+      { property: 'Data Inizio', date: { on_or_before: to } },
+      {
+        or: [
+          { property: 'Data Fine Prevista', date: { on_or_after: from } },
+          { property: 'Data Fine Prevista', date: { is_empty: true } },
+        ],
+      },
     ],
   })
 }
@@ -38,16 +49,14 @@ async function resolvePageTitles(ids: string[]): Promise<Map<string, string>> {
 }
 
 export async function getTasksForPeriodExport(from: string, to: string): Promise<TaskExportRow[]> {
-  const projects = await getActiveProjects()
+  const projects = await getActiveProjectsInPeriod(from, to)
 
   const tasksByProject = await Promise.all(
     projects.map(async (project) => {
       const projectName = pageTitle(project)
       const tasks = await queryAllPages(notion, env.NOTION_TASKS_DB_ID, {
-        and: [
-          { property: 'Progetto', relation: { contains: project.id } },
-          { property: 'Data Inizio', date: { on_or_before: to } },
-        ],
+        property: 'Progetto',
+        relation: { contains: project.id },
       })
       return { projectName, tasks }
     }),
@@ -57,14 +66,7 @@ export async function getTasksForPeriodExport(from: string, to: string): Promise
 
   for (const { projectName, tasks } of tasksByProject) {
     for (const task of tasks) {
-      const dataFineProp = task.properties['Data Fine']
-      const dataFine = dataFineProp?.type === 'formula' && dataFineProp.formula.type === 'date'
-        ? (dataFineProp.formula.date?.start ?? null)
-        : null
-
-      if (dataFine === null || dataFine >= from) {
-        filtered.push({ projectName, task })
-      }
+      filtered.push({ projectName, task })
     }
   }
 
